@@ -10,7 +10,7 @@ import (
 )
 
 
-var db *sql.DB
+var DB *sql.DB
 const schema string = `
 CREATE TABLE scheduler (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -31,22 +31,22 @@ func Init(dbFile string) error {
         install = true
     }
 
-    db, err = sql.Open("sqlite", dbFile)
+    DB, err = sql.Open("sqlite", dbFile)
     if err != nil {
         return fmt.Errorf("database open error: %s", err)
     }
 
     if install{
-        db.Exec(schema)
+        DB.Exec(schema)
     }
     return nil
 }
 
 
 func Close() error {
-	if db != nil {
-		err := db.Close()
-		db = nil
+	if DB != nil {
+		err := DB.Close()
+		DB = nil
 		return err
 	}
 	return nil

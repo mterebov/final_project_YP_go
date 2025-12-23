@@ -68,9 +68,9 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 		return date.Format(timePattern), nil
 	
 	case "w":
-		return "", fmt.Errorf("unsupported format")
+		return "", fmt.Errorf("unsupported format: support may appear soon")
 	case "m":
-		return "", fmt.Errorf("unsupported format")
+		return "", fmt.Errorf("unsupported format: support may appear soon")
 	default:
 		return "", fmt.Errorf("unsupported format")
 	}
