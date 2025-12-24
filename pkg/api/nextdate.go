@@ -11,8 +11,9 @@ import (
 const timePattern = "20060102"
 
 func afterNow(date, now time.Time) bool {
-	nowFormatted, _ := time.Parse(timePattern, now.Format(timePattern))
-	return date.After(nowFormatted)
+	y1, m1, d1 := date.Date()
+	y2, m2, d2 := now.Date()
+	return y1 > y2 || (y1 == y2 && m1 > m2) || (y1 == y2 && m1 == m2 && d1 > d2)
 }
 
 

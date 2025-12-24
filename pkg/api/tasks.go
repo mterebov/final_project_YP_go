@@ -14,7 +14,6 @@ type TasksResp struct {
 
 func writeJson(w http.ResponseWriter, v any) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(v)
 }
 
@@ -22,8 +21,10 @@ func writeJson(w http.ResponseWriter, v any) {
 func tasksHandle(w http.ResponseWriter, r *http.Request) {
     tasks, err := db.Tasks(50) // в параметре максимальное количество записей
     if err != nil {
-		_ = RespCreator(w, 500, err, 0)
+		w.WriteHeader(http.StatusInternalServerError)
+        writeJson(w, response{Error: err.Error()})
         return
     }
+	w.WriteHeader(http.StatusOK)
     writeJson(w, TasksResp{Tasks: tasks})
 }

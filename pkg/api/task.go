@@ -1,8 +1,8 @@
 package api
 
 import (
+	"database/sql"
 	"encoding/json"
-	"errors"
 	"final_project_yp_go/pkg/db"
 	"fmt"
 	"net/http"
@@ -18,80 +18,127 @@ type response struct {
 
 
 func checkDate(task *db.Task) error {
-	var next string
 	now := time.Now()
+
+	// Подставить сегодняшнюю дату, если не указана
 	if task.Date == "" {
 		task.Date = now.Format("20060102")
 	}
-	t, err := time.Parse("20060102", task.Date)
-	if err != nil {return err}
-	if task.Repeat != "" {
-		next, err = NextDate(now, task.Date, task.Repeat)
-		if err != nil {return err}
+
+	// Проверка формата даты
+	startDate, err := time.Parse("20060102", task.Date)
+	if err != nil {
+		return fmt.Errorf("Incorrect date format: %w", err)
 	}
-	if afterNow(now, t) {
-        if len(task.Repeat) == 0 {
-            task.Date = now.Format("20060102")
-        } else {
-            task.Date = next
-        }
-    }
+
+	// Проверить и пересчитать повтор
+	if task.Repeat != "" {
+		next, err := NextDate(now, task.Date, task.Repeat)
+		if err != nil {
+			return fmt.Errorf("Repeat rule error: %w", err)
+		}
+		// Если дата в прошлом — заменить на next
+		if afterNow(now, startDate) {
+			task.Date = next
+		}
+	} else {
+		// Если повтора нет, но дата в прошлом — заменим на сегодня
+		if afterNow(now, startDate) {
+			task.Date = now.Format("20060102")
+		}
+	}
+
 	return nil
-}
-
-
-func RespCreator(w http.ResponseWriter, status int, err error, id int64) error {
-    w.Header().Set("Content-Type", "application/json; charset=utf-8")
-
-    var resBody response
-    if err != nil {
-        resBody.Error = err.Error()
-        w.WriteHeader(status)
-        return json.NewEncoder(w).Encode(resBody)
-    }
-
-    resBody.ID = id
-    w.WriteHeader(status)
-    return json.NewEncoder(w).Encode(resBody)
 }
 
 
 func addTaskHandle(w http.ResponseWriter, r *http.Request) {
     defer r.Body.Close()
-
     var task db.Task
     dec := json.NewDecoder(r.Body)
 
     if err := dec.Decode(&task); err != nil {
-        _ = RespCreator(w, http.StatusBadRequest, err, 0)
+        w.WriteHeader(http.StatusBadRequest)
+        writeJson(w, response{Error: err.Error()})
         return
     }
 
     if strings.TrimSpace(task.Title) == "" {
-        _ = RespCreator(w, http.StatusBadRequest, errors.New("title is required"), 0)
+        w.WriteHeader(http.StatusBadRequest)
+        writeJson(w, response{Error: "title can't be empty"})
         return
     }
 
     if err := checkDate(&task); err != nil {
-        _ = RespCreator(w, http.StatusBadRequest, err, 0)
+        w.WriteHeader(http.StatusBadRequest)
+        writeJson(w, response{Error: err.Error()})
         return
     }
 
     id, err := db.AddTask(&task)
     if err != nil {
-		fmt.Println(err)
-        _ = RespCreator(w, http.StatusInternalServerError, err, 0)
+        w.WriteHeader(http.StatusInternalServerError)
+        writeJson(w, response{Error: err.Error()})
         return
     }
 
-    _ = RespCreator(w, http.StatusOK, nil, id)
+    w.WriteHeader(http.StatusOK)
+    writeJson(w, response{ID: id})
 }
 
 
 func getTaskHandle(w http.ResponseWriter, r *http.Request) {
-
+    id := strings.TrimSpace(r.FormValue("id"))
+    if id == "" {
+        w.WriteHeader(http.StatusBadRequest)
+        writeJson(w, response{Error: "id is required"})
+        return
+    }
+    taskById, err := db.GetTask(id)
+    if err != nil {
+        if err == sql.ErrNoRows {
+            w.WriteHeader(http.StatusNotFound)
+        } else {
+            w.WriteHeader(http.StatusInternalServerError)
+        }
+        writeJson(w, response{Error: err.Error()})
+        return
+    }
+    w.WriteHeader(http.StatusOK)
+    writeJson(w, taskById)
 }
 
+
 func updateTaskHandle(w http.ResponseWriter, r *http.Request) {
-    
+    defer r.Body.Close()
+    var task db.Task
+    dec := json.NewDecoder(r.Body)
+
+    if err := dec.Decode(&task); err != nil {
+        w.WriteHeader(http.StatusBadRequest)
+        writeJson(w, response{Error: err.Error()})
+        return
+    }
+
+    if strings.TrimSpace(task.Title) == "" {
+        w.WriteHeader(http.StatusBadRequest)
+        writeJson(w, response{Error: "title can't be empty"})
+        return
+    }
+
+    if err := checkDate(&task); err != nil {
+        w.WriteHeader(http.StatusBadRequest)
+        writeJson(w, response{Error: err.Error()})
+        return
+    }
+
+    err := db.UpdateTask(&task)
+    if err != nil {
+        w.WriteHeader(http.StatusInternalServerError)
+        writeJson(w, response{Error: err.Error()})
+        return
+    }
+
+    w.WriteHeader(http.StatusOK)
+    writeJson(w, response{})
 }
