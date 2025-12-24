@@ -8,18 +8,10 @@ import (
 	"time"
 )
 
-const timePattern = "20060102"
-
-func afterNow(date, now time.Time) bool {
-	y1, m1, d1 := date.Date()
-	y2, m2, d2 := now.Date()
-	return y1 > y2 || (y1 == y2 && m1 > m2) || (y1 == y2 && m1 == m2 && d1 > d2)
-}
-
 
 func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 	// Парсим дату
-	date, err := time.Parse(timePattern, dstart)
+	date, err := time.Parse(TimePattern, dstart)
 	if err != nil {
 		return "", fmt.Errorf("time parse error: %s", err)
 	}
@@ -53,7 +45,7 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 			}
 		}
 		
-		return date.Format(timePattern), nil
+		return date.Format(TimePattern), nil
 	
 	// Для y (ежегодное повторение)
 	case "y":
@@ -66,30 +58,150 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 				break
 			}
 		}
-		return date.Format(timePattern), nil
+		return date.Format(TimePattern), nil
 	
 	case "w":
-		return "", fmt.Errorf("unsupported format: support may appear soon")
+		if len(repeatParts) != 2 {
+			return "", fmt.Errorf("unsupported format: w requires days list")
+		}
+
+		list, err := parseCSVInts(repeatParts[1])
+		if err != nil {
+			return "", fmt.Errorf("bad w list: %w", err)
+		}
+
+		var allowed [8]bool // 1..7
+		for _, d := range list {
+			if d < 1 || d > 7 {
+				return "", fmt.Errorf("bad weekday: %d", d)
+			}
+			allowed[d] = true
+		}
+
+		// Стартуем с даты dstart и двигаемся до тех пор, пока дата не станет > now
+		// А потом ищем ближайший подходящий weekday, день за днём.
+		for {
+			// перевести time.Weekday (Sun=0..Sat=6) в 1..7 (Mon=1..Sun=7)
+			wd := int(date.Weekday())
+			var wnum int
+			if wd == 0 {
+				wnum = 7
+			} else {
+				wnum = wd
+			}
+
+			if allowed[wnum] && afterNow(date, now) {
+				return date.Format(TimePattern), nil
+			}
+
+			date = date.AddDate(0, 0, 1)
+			// защитный лимит
+			if date.Sub(now) > (time.Hour * 24 * 366 * 10) {
+				return "", fmt.Errorf("cannot find next w date")
+			}
+		}
 	case "m":
-		return "", fmt.Errorf("unsupported format: support may appear soon")
+		if len(repeatParts) != 2 && len(repeatParts) != 3 {
+			return "", fmt.Errorf("unsupported format: m requires days list and optional months list")
+		}
+
+		// дни месяца
+		dayList, err := parseCSVInts(repeatParts[1])
+		if err != nil {
+			return "", fmt.Errorf("bad m days: %w", err)
+		}
+
+		var dayAllowed [32]bool // 1..31
+		wantLast := false
+		wantPrevLast := false
+		for _, d := range dayList {
+			switch d {
+			case -1:
+				wantLast = true
+			case -2:
+				wantPrevLast = true
+			default:
+				if d < 1 || d > 31 {
+					return "", fmt.Errorf("bad day of month: %d", d)
+				}
+				dayAllowed[d] = true
+			}
+		}
+
+		// месяцы
+		var monthAllowed [13]bool // 1..12
+		if len(repeatParts) == 3 {
+			monthList, err := parseCSVInts(repeatParts[2])
+			if err != nil {
+				return "", fmt.Errorf("bad m months: %w", err)
+			}
+			for _, m := range monthList {
+				if m < 1 || m > 12 {
+					return "", fmt.Errorf("bad month: %d", m)
+				}
+				monthAllowed[m] = true
+			}
+		} else {
+			for m := 1; m <= 12; m++ {
+				monthAllowed[m] = true
+			}
+		}
+
+		// идём по дням вперёд от dstart и ищем первый день > now, который подходит
+		for {
+			if afterNow(date, now) {
+				mon := int(date.Month())
+				if monthAllowed[mon] {
+					d := date.Day()
+					dim := daysInMonth(date)
+
+					ok := dayAllowed[d]
+					if !ok && wantLast && d == dim {
+						ok = true
+					}
+					if !ok && wantPrevLast && d == dim-1 {
+						ok = true
+					}
+
+					if ok {
+						return date.Format(TimePattern), nil
+					}
+				}
+			}
+
+			date = date.AddDate(0, 0, 1)
+
+			// защитный лимит
+			if date.Sub(now) > (time.Hour * 24 * 366 * 20) {
+				return "", fmt.Errorf("cannot find next m date")
+			}
+		}
 	default:
 		return "", fmt.Errorf("unsupported format")
 	}
 }
 
 
-func NextDateHandle(res http.ResponseWriter, req *http.Request) {
-	nowString := req.FormValue("now")
-	date := req.FormValue("date")
-	repeat := req.FormValue("repeat")
-	nowTime, err := time.Parse(timePattern, nowString)
+func NextDateHandle(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	nowString := r.FormValue("now")
+	date := r.FormValue("date")
+	repeat := r.FormValue("repeat")
+
+	nowTime, err := time.Parse(TimePattern, nowString)
 	if err != nil || len(nowString) == 0 {
 		nowTime = time.Now()
 	}
+
 	response, err := NextDate(nowTime, date, repeat)
 	if err != nil {
-		http.Error(res, err.Error(), http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	fmt.Fprint(res, response)
+	
+	fmt.Fprint(w, response)
 }

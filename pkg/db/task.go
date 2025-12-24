@@ -30,18 +30,26 @@ func AddTask(task *Task) (int64, error) {
 }
 
 
-func Tasks(limit int64) ([]*Task, error) {
-    rows, err := DB.Query(
-        `SELECT id, date, title, comment, repeat
-         FROM scheduler
-         ORDER BY date, id
-         LIMIT ?`, limit,
-    )
-    if err != nil {
-        return nil, err
-    }
-    defer rows.Close()
+func Tasks(limit int64, search string) ([]*Task, error) {
+    var queryString string
+    var args []any
 
+    if search == "" {
+        queryString = `SELECT id, date, title, comment, repeat FROM scheduler ORDER BY date, id LIMIT ?`
+        args = append(args, limit)
+    } else if date, err := searchToDate(search); err == nil {
+        queryString = `SELECT id, date, title, comment, repeat FROM scheduler WHERE date = ? ORDER BY date LIMIT ?`
+        args = append(args, date, limit)
+    } else {
+        search = "%" + search + "%"
+        queryString = `SELECT id, date, title, comment, repeat FROM scheduler WHERE title LIKE ? OR comment LIKE ? ORDER BY date LIMIT ?`
+        args = append(args, search, search, limit)
+    }
+    rows, err := DB.Query(queryString, args...)
+        if err != nil {
+            return nil, err
+        }
+        defer rows.Close()
     out := make([]*Task, 0, limit)
     for rows.Next() {
         t := new(Task)
