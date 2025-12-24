@@ -27,6 +27,7 @@ func AddTask(task *Task) (int64, error) {
     return id, err
 }
 
+
 func Tasks(limit int64) ([]*Task, error) {
     rows, err := DB.Query(
         `SELECT id, date, title, comment, repeat
@@ -52,3 +53,13 @@ func Tasks(limit int64) ([]*Task, error) {
     }
     return out, nil
 }
+
+
+// func GetTask(id string) (*Task, error) {
+//     query := `SELECT * FROM scheduler WHERE id = :id`
+// }
+
+
+// func UpdateTask(id string) error {
+    
+// }

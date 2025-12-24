@@ -12,10 +12,10 @@ type TasksResp struct {
 }
 
 
-func writeJson(w http.ResponseWriter, tasks TasksResp) {
+func writeJson(w http.ResponseWriter, v any) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(tasks)
+	_ = json.NewEncoder(w).Encode(v)
 }
 
 

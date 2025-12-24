@@ -57,11 +57,6 @@ func RespCreator(w http.ResponseWriter, status int, err error, id int64) error {
 
 
 func addTaskHandle(w http.ResponseWriter, r *http.Request) {
-    if r.Method != http.MethodPost {
-        _ = RespCreator(w, http.StatusBadRequest, fmt.Errorf("wrong method %s", r.Method), 0)
-        return
-    }
-
     defer r.Body.Close()
 
     var task db.Task
@@ -92,3 +87,11 @@ func addTaskHandle(w http.ResponseWriter, r *http.Request) {
     _ = RespCreator(w, http.StatusOK, nil, id)
 }
 
+
+func getTaskHandle(w http.ResponseWriter, r *http.Request) {
+
+}
+
+func updateTaskHandle(w http.ResponseWriter, r *http.Request) {
+    
+}
