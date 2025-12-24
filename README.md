@@ -18,14 +18,12 @@
 
 - Go
 - SQLite (`modernc.org/sqlite`)
-- `sqlx` (`github.com/jmoiron/sqlx`)
-- Тесты: `stretchr/testify`
-- CI: GitHub Actions (`.github/workflows/tests.yml`)
+
 
 ---
 
 ## Структура проекта
-
+```text
 .
 ├── main.go # точка входа
 ├── scheduler.db # файл БД (локально)
@@ -35,6 +33,7 @@
 │ └── db # работа с SQLite (CRUD)
 ├── web # фронтенд (HTML/CSS/JS)
 └── tests # автотесты для проверки ТЗ
+```
 
 ---
 
@@ -81,14 +80,18 @@
 - `TODO_DBFILE` — путь к файлу SQLite (по умолчанию `scheduler.db`)
 
 #### PowerShell
+``` powershell
 $env:TODO_PORT="7540"
 $env:TODO_DBFILE="scheduler.db"
 go run .
+```
 
 #### bash / zsh
+``` bash
 export TODO_PORT=7540
 export TODO_DBFILE=scheduler.db
 go run .
+```
 
 #### Адрес в браузере
 http://localhost:7540/
