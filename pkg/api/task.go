@@ -142,3 +142,74 @@ func updateTaskHandle(w http.ResponseWriter, r *http.Request) {
     w.WriteHeader(http.StatusOK)
     writeJson(w, response{})
 }
+
+
+func doneTaskHandle(w http.ResponseWriter, r *http.Request) {
+    id := strings.TrimSpace(r.FormValue("id"))
+    if id == "" {
+        w.WriteHeader(http.StatusBadRequest)
+        writeJson(w, response{Error: "id is required"})
+        return
+    }
+    task, err := db.GetTask(id)
+    if err != nil {
+        if err == sql.ErrNoRows {
+            w.WriteHeader(http.StatusNotFound)
+        } else {
+            w.WriteHeader(http.StatusInternalServerError)
+        }
+        writeJson(w, response{Error: err.Error()})
+        return
+    }
+    if task.Repeat == "" {
+        err := db.DeleteTask(task.ID)
+        if err != nil {
+            w.WriteHeader(http.StatusInternalServerError)
+            writeJson(w, response{Error: err.Error()})
+            return
+        }
+        w.WriteHeader(http.StatusOK)
+        writeJson(w, response{})
+        return
+    }
+    next, err := NextDate(time.Now(), task.Date, task.Repeat)
+    if err != nil {
+        w.WriteHeader(http.StatusInternalServerError)
+        writeJson(w, response{Error: err.Error()})
+        return
+    }
+    task.Date = next
+    if err = db.UpdateTask(task); err != nil {
+        if err == sql.ErrNoRows {
+            w.WriteHeader(http.StatusNotFound)
+        } else {
+            w.WriteHeader(http.StatusInternalServerError)
+        }
+        writeJson(w, response{Error: err.Error()})
+        return
+    }
+    w.WriteHeader(http.StatusOK)
+    writeJson(w, response{})
+}
+
+
+func deleteTaskHandle(w http.ResponseWriter, r *http.Request) {
+    id := strings.TrimSpace(r.FormValue("id"))
+    if id == "" {
+        w.WriteHeader(http.StatusBadRequest)
+        writeJson(w, response{Error: "id is required"})
+        return
+    }
+    err := db.DeleteTask(id)
+    if err != nil {
+        if err == sql.ErrNoRows {
+            w.WriteHeader(http.StatusNotFound)
+        } else {
+            w.WriteHeader(http.StatusInternalServerError)
+        }
+        writeJson(w, response{Error: err.Error()})
+        return
+    }
+    w.WriteHeader(http.StatusOK)
+    writeJson(w, response{})
+}

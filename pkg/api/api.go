@@ -8,6 +8,7 @@ func Init(mux *http.ServeMux) {
 	mux.HandleFunc("/api/nextdate", NextDateHandle)
 	mux.HandleFunc("/api/task", taskHandle)
 	mux.HandleFunc("/api/tasks", tasksHandle)
+	mux.HandleFunc("/api/task/done", doneTaskHandle)
 }
 
 
@@ -22,6 +23,9 @@ func taskHandle(res http.ResponseWriter, req *http.Request) {
 	// Обработка редактирования задачи
 	case http.MethodPut:
 		updateTaskHandle(res, req)
+	// Обработка удаления задачи
+	case http.MethodDelete:
+		deleteTaskHandle(res, req)
 	default:
 		http.Error(res, "Bad Request: unreacheble", http.StatusBadRequest)
 	}

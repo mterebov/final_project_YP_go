@@ -2,7 +2,6 @@ package db
 
 import (
 	"database/sql"
-	"fmt"
 )
 
 
@@ -89,7 +88,24 @@ func UpdateTask(task *Task) error {
         return err
     }
     if count == 0 {
-        return fmt.Errorf(`incorrect id for updating task`)
+        return sql.ErrNoRows
     }
     return nil
 } 
+
+
+func DeleteTask(id string) error {
+    result, err := DB.Exec(`DELETE FROM scheduler WHERE id = ?`, id)
+    if err != nil {
+        return err
+    }
+
+    count, err := result.RowsAffected()
+    if err != nil {
+        return err
+    }
+    if count == 0 {
+        return sql.ErrNoRows
+    }
+    return nil
+}
