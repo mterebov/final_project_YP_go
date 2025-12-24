@@ -40,7 +40,7 @@ func checkDate(task *db.Task) error {
 }
 
 
-func respCreator(w http.ResponseWriter, status int, err error, id int64) error {
+func RespCreator(w http.ResponseWriter, status int, err error, id int64) error {
     w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
     var resBody response
@@ -57,33 +57,38 @@ func respCreator(w http.ResponseWriter, status int, err error, id int64) error {
 
 
 func addTaskHandle(w http.ResponseWriter, r *http.Request) {
+    if r.Method != http.MethodPost {
+        _ = RespCreator(w, http.StatusBadRequest, fmt.Errorf("wrong method %s", r.Method), 0)
+        return
+    }
+
     defer r.Body.Close()
 
     var task db.Task
     dec := json.NewDecoder(r.Body)
 
     if err := dec.Decode(&task); err != nil {
-        _ = respCreator(w, http.StatusBadRequest, err, 0)
+        _ = RespCreator(w, http.StatusBadRequest, err, 0)
         return
     }
 
     if strings.TrimSpace(task.Title) == "" {
-        _ = respCreator(w, http.StatusBadRequest, errors.New("title is required"), 0)
+        _ = RespCreator(w, http.StatusBadRequest, errors.New("title is required"), 0)
         return
     }
 
     if err := checkDate(&task); err != nil {
-        _ = respCreator(w, http.StatusBadRequest, err, 0)
+        _ = RespCreator(w, http.StatusBadRequest, err, 0)
         return
     }
 
     id, err := db.AddTask(&task)
     if err != nil {
 		fmt.Println(err)
-        _ = respCreator(w, http.StatusInternalServerError, err, 0)
+        _ = RespCreator(w, http.StatusInternalServerError, err, 0)
         return
     }
 
-    _ = respCreator(w, http.StatusOK, nil, id)
+    _ = RespCreator(w, http.StatusOK, nil, id)
 }
 

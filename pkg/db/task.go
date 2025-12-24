@@ -9,7 +9,6 @@ type Task struct {
 	Title 	string `json:"title"`
 	Comment string `json:"comment"`
 	Repeat 	string `json:"repeat"`
-	Error 	string `json:"error"`
 }
 
 
@@ -26,4 +25,30 @@ func AddTask(task *Task) (int64, error) {
         id, err = res.LastInsertId()
     }
     return id, err
+}
+
+func Tasks(limit int64) ([]*Task, error) {
+    rows, err := DB.Query(
+        `SELECT id, date, title, comment, repeat
+         FROM scheduler
+         ORDER BY date, id
+         LIMIT ?`, limit,
+    )
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
+
+    out := make([]*Task, 0, limit)
+    for rows.Next() {
+        t := new(Task)
+        if err := rows.Scan(&t.ID, &t.Date, &t.Title, &t.Comment, &t.Repeat); err != nil {
+            return nil, err
+        }
+        out = append(out, t)
+    }
+    if err := rows.Err(); err != nil {
+        return nil, err
+    }
+    return out, nil
 }
