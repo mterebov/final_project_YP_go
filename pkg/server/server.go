@@ -12,11 +12,12 @@ import (
 
 func StartServer() error {
 	dbFile := strings.TrimSpace(os.Getenv("TODO_DBFILE"))
+	fmt.Println(os.Getenv("TODO_DBFILE"))
 	if dbFile == "" {
 		dbFile = "scheduler.db"
 	}
 
-	if err := db.Init("scheduler.db"); err != nil {
+	if err := db.Init(dbFile); err != nil {
 		return fmt.Errorf("db init error: %w", err)
 	}
 	defer db.Close()
