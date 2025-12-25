@@ -11,7 +11,6 @@ import (
 
 
 func addTaskHandle(w http.ResponseWriter, r *http.Request) {
-    defer r.Body.Close()
     var task db.Task
     dec := json.NewDecoder(r.Body)
 
@@ -68,7 +67,6 @@ func getTaskHandle(w http.ResponseWriter, r *http.Request) {
 
 
 func updateTaskHandle(w http.ResponseWriter, r *http.Request) {
-    defer r.Body.Close()
     var task db.Task
     dec := json.NewDecoder(r.Body)
 
@@ -103,6 +101,11 @@ func updateTaskHandle(w http.ResponseWriter, r *http.Request) {
 
 
 func doneTaskHandle(w http.ResponseWriter, r *http.Request) {
+    if r.Method != http.MethodPost {
+        http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+        return
+    }
+
     id := strings.TrimSpace(r.FormValue("id"))
     if id == "" {
         w.WriteHeader(http.StatusBadRequest)

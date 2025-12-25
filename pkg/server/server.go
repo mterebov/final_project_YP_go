@@ -30,7 +30,7 @@ func StartServer() error {
 	if !strings.HasPrefix(port, ":") {
 		port = ":" + port
 	}
-
+	fmt.Printf("Server port: %s\nDatabase file: %s\n", port, dbFile)
 	mux := http.NewServeMux()
 	mux.Handle("/", http.FileServer(http.Dir("./web")))
 	api.Init(mux)

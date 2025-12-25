@@ -23,8 +23,10 @@ type TasksResp struct {
 }
 
 
-const TimePattern = "20060102"
-
+const (
+	TimePattern = "20060102"
+	Limit = 50
+)
 
 func afterNow(date, now time.Time) bool {
 	y1, m1, d1 := date.Date()

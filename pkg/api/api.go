@@ -27,6 +27,7 @@ func taskHandle(res http.ResponseWriter, req *http.Request) {
 	case http.MethodDelete:
 		deleteTaskHandle(res, req)
 	default:
-		http.Error(res, "Bad Request: unreacheble", http.StatusBadRequest)
+		// тут код 405 должен быть
+		http.Error(res, "Method Not Allowed", http.StatusMethodNotAllowed) // 405
 	}
 }

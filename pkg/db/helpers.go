@@ -5,11 +5,13 @@ import (
 
 )
 
+const TimePattern = "20060102"
 
 func searchToDate(search string) (string, error) {
 	date, err := time.Parse("02.01.2006", search)
 	if err != nil {
 		return "", err
 	}
-	return date.Format("20060102"), nil
+	// нужно использовать константу вместо 20060102
+	return date.Format(TimePattern), nil
 }
